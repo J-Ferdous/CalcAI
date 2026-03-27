@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:avatar_glow/avatar_glow.dart';
 import 'calculator_logic.dart';
+import 'ai_service.dart';
 
 void main() {
   runApp(const VoiceCalculatorApp());
@@ -55,17 +56,17 @@ class _VoiceCalculatorState extends State<VoiceCalculator> {
     }
   }
 
-  void _processCalculation(String input) {
-    String res = _logic.calculate(input);
-    setState(() {
-      _result = res;
-    });
-    if (res != "Error") {
-      _logic.speak("The answer is $res");
-    } else {
-      _logic.speak("Sorry, I didn't catch that expression clearly.");
-    }
-  }
+  final AIService _ai = AIService();
+
+void _processCalculation(String input) async {
+  String res = await _ai.getAnswer(input);
+
+  setState(() {
+    _result = res;
+  });
+
+  _logic.speak("The answer is $res");
+}
 
   @override
   Widget build(BuildContext context) {
