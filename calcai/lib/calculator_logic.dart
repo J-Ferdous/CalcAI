@@ -16,6 +16,12 @@ class CalculatorLogic {
     await tts.speak(text);
   }
 
+  void stop() async {
+    await tts.stop();
+  }
+
+
+
   String convertWordsToMath(String input) {
     input = input.toLowerCase();
 

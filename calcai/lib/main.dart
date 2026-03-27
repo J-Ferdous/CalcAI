@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:avatar_glow/avatar_glow.dart';
 import 'calculator_logic.dart';
 import 'ai_service.dart';
+import 'intro_screen.dart';
 
 void main() {
   runApp(const VoiceCalculatorApp());
@@ -15,7 +16,7 @@ class VoiceCalculatorApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
-      home: const VoiceCalculator(),
+      home: const IntroScreen(),
     );
   }
 }
