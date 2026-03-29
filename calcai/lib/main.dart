@@ -1,10 +1,13 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:avatar_glow/avatar_glow.dart';
 import 'calculator_logic.dart';
 import 'ai_service.dart';
 import 'intro_screen.dart';
+import 'palette.dart';
+import 'widgets.dart';
+import 'wave.dart';
+
 void main() {
   runApp(const VoiceCalculatorApp());
 }
@@ -20,23 +23,6 @@ class VoiceCalculatorApp extends StatelessWidget {
     );
   }
 }
-// ─────────────────────────────────────────────
-//  CalcAI — Redesigned Voice Calculator UI
-//  Theme: Dark glass · Conic gradient ring
-//        Animated sound bars · Syne + DM Sans
-// ─────────────────────────────────────────────
-
-
-
-// ─────────────────────────────────────────────
-//  CalcAI — Pastel Robot Theme
-//  Palette extracted from the robot character:
-//    Lavender  #C084FC  (body / primary)
-//    Soft Pink #F472B6  (cheeks / accent)
-//    Blush     #F9A8D4  (highlight)
-//    BG        #FDF5FF  (off-white lavender)
-//    Deep Plum #7C3AED  (text / brand)
-// ─────────────────────────────────────────────
 
 class VoiceCalculator extends StatefulWidget {
   const VoiceCalculator({super.key});
@@ -46,7 +32,6 @@ class VoiceCalculator extends StatefulWidget {
 
 class _VoiceCalculatorState extends State<VoiceCalculator>
     with TickerProviderStateMixin {
-  // ── Services (unchanged) ────────────────────
   final CalculatorLogic _logic = CalculatorLogic();
   final AIService _ai = AIService();
 
@@ -59,21 +44,10 @@ class _VoiceCalculatorState extends State<VoiceCalculator>
   late Animation<double> _floatAnim;
   late AnimationController _barCtrl;
 
-  // ── Pastel palette ──────────────────────────
-  static const _bg        = Color(0xFFfff4fb);
-  static const _lavender  = Color(0xFFC084FC);
-  static const _pink      = Color(0xFFF472B6);
-  static const _blush     = Color(0xFFF9A8D4);
-  static const _deepPlum  = Color(0xFF7C3AED);
-  static const _textBody  = Color(0xFF8B6DAA);
-  static const _textMuted = Color(0xFFC4A8DC);
-  static const _cardBg    = Color(0xD0FFFFFF);
-  static const _cardBorder = Color(0x4DC4A0E6);
-
   @override
   void initState() {
-    super.initState();
 
+    super.initState();
     _floatCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 3000),
@@ -87,6 +61,17 @@ class _VoiceCalculatorState extends State<VoiceCalculator>
       vsync: this,
       duration: const Duration(milliseconds: 700),
     );
+
+    super.initState();
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 0.9, end: 1.15).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -94,38 +79,54 @@ class _VoiceCalculatorState extends State<VoiceCalculator>
     _floatCtrl.dispose();
     _barCtrl.dispose();
     super.dispose();
+    _pulseController.dispose();
+    super.dispose();
   }
 
   void _listen() async {
     if (!_isListening) {
-      bool available = await _logic.initSpeech();
-      if (available) {
-        setState(() {
-          _isListening = true;
-          _spokenText = 'Speak now…';
-          _result = '—';
-          _resultSub = 'Processing…';
-        });
-        _barCtrl.repeat(reverse: true);
-        _logic.speech.listen(
-          onResult: (val) {
-            setState(() {
-              _spokenText = val.recognizedWords;
-              if (val.finalResult) {
-                _isListening = false;
-                _barCtrl.stop();
-                _processCalculation(_spokenText);
-              }
-            });
-          },
-        );
-      }
+      _floatCtrl.forward(from: 0);
+      _barCtrl.repeat(reverse: true);
+
+      setState(() {
+        _isListening = true;
+        _spokenText = 'Speak now…';
+        _result = '—';
+        _resultSub = 'Processing…';
+      });
+
+      Future(() async {
+        bool available = await _logic.initSpeech();
+
+        if (available) {
+          _logic.speech.listen(
+            onResult: (val) {
+              setState(() {
+                _spokenText = val.recognizedWords;
+
+                if (val.finalResult) {
+                  _isListening = false;
+                  _barCtrl.stop();
+                  _processCalculation(_spokenText);
+                }
+              });
+            },
+          );
+        } else {
+          setState(() {
+            _isListening = false;
+            _barCtrl.stop();
+          });
+        }
+      });
+
     } else {
       setState(() => _isListening = false);
       _barCtrl.stop();
       _logic.speech.stop();
     }
   }
+
 
   void _processCalculation(String input) async {
     final res = await _ai.getAnswer(input);
@@ -139,7 +140,7 @@ class _VoiceCalculatorState extends State<VoiceCalculator>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: bg,
       body: Stack(
         children: [
           SafeArea(
@@ -151,20 +152,16 @@ class _VoiceCalculatorState extends State<VoiceCalculator>
                     child: Column(
                       children: [
                         const SizedBox(height: 12),
-                        _buildTopBar(),
+                        buildTopBar(),
                         const SizedBox(height: 16),
                         _buildRobotStage(),
                         const SizedBox(height: 16),
                         _buildGlassCard(),
                         const SizedBox(height: 30),
-                        //_buildChips(),
-                        //const Spacer(),
                         _buildMicButton(),
                         const SizedBox(height: 8),
                         _buildTapLabel(),
                         const SizedBox(height: 20),
-                        //_buildBottomNav(),
-                        //const SizedBox(height: 24),
                       ],
                     ),
                   ),
@@ -177,63 +174,16 @@ class _VoiceCalculatorState extends State<VoiceCalculator>
     );
   }
 
-  // ─────────────────────────────────────────────
-  //  TOP BAR
-  // ─────────────────────────────────────────────
-  Widget _buildTopBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 26),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 36, height: 36,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  gradient: const LinearGradient(
-                    colors: [_lavender, _pink],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _lavender.withOpacity(0.4),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 18),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                'CalcAI',
-                style: GoogleFonts.nunito(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: _deepPlum,
-                  letterSpacing: -0.3,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─────────────────────────────────────────────
-  //  ROBOT STAGE
-  // ─────────────────────────────────────────────
   Widget _buildRobotStage() {
     return Column(
       children: [
         AnimatedBuilder(
           animation: _floatAnim,
           builder: (context, child) => Transform.translate(
-            offset: Offset(0, _isListening ? _floatAnim.value * 0.6 : _floatAnim.value),
+            offset: Offset(
+              0,
+              (_isListening ? -6 : 0) + _floatAnim.value,
+            ),
             child: child,
           ),
             child: Center(
@@ -246,7 +196,6 @@ class _VoiceCalculatorState extends State<VoiceCalculator>
           ),
 
         const SizedBox(height: 10),
-
         // Greeting row
         Row(
           mainAxisSize: MainAxisSize.min,
@@ -255,25 +204,20 @@ class _VoiceCalculatorState extends State<VoiceCalculator>
             const SizedBox(width: 8),
           ],
         ),
-
         const SizedBox(height: 10),
-
         // Sound bars
-        Row(
+        /*Row(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: List.generate(6, (i) {
             const delays = [0.0, 0.15, 0.05, 0.25, 0.10, 0.30];
             return _SoundBar(active: _isListening, delay: delays[i]);
           }),
-        ),
+        ),*/
       ],
     );
   }
 
-  // ─────────────────────────────────────────────
-  //  GLASS CARD
-  // ─────────────────────────────────────────────
   Widget _buildGlassCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -284,12 +228,12 @@ class _VoiceCalculatorState extends State<VoiceCalculator>
           child: Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: _cardBg,
+              color: cardBg,
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: _cardBorder, width: 1.5),
+              border: Border.all(color: cardBorder, width: 1.5),
               boxShadow: [
                 BoxShadow(
-                  color: _lavender.withOpacity(0.10),
+                  color: lavender.withOpacity(0.10),
                   blurRadius: 20,
                   offset: const Offset(0, 4),
                 ),
@@ -298,8 +242,9 @@ class _VoiceCalculatorState extends State<VoiceCalculator>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _sLabel('YOUR QUERY', _textMuted),
+                sLabel('YOUR QUERY', textMuted),
                 const SizedBox(height: 8),
+
                 SizedBox(
                   height: 38,
                   child: SingleChildScrollView(
@@ -308,44 +253,35 @@ class _VoiceCalculatorState extends State<VoiceCalculator>
                       style: GoogleFonts.quicksand(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: _textBody,
+                        color: textBody,
                         height: 1.55,
                       ),
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 14),
-                _PastelDivider(),
+                PastelDivider(),
                 const SizedBox(height: 14),
-                _sLabel('RESULT', _pink),
-                const SizedBox(height: 6),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: ShaderMask(
-                    shaderCallback: (r) => const LinearGradient(
-                      colors: [_deepPlum, _pink, _blush],
-                      stops: [0.0, 0.6, 1.0],
-                    ).createShader(r),
-                    child: Text(
-                      _result,
-                      style: GoogleFonts.nunito(
-                        fontSize: 52,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        letterSpacing: -2,
-                        height: 1.0,
-                      ),
-                    ),
-                  ),
+
+                sLabel('RESULT', pink),
+                const SizedBox(height: 10),
+
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  child: _isListening
+                      ? buildWaveform()
+                      : buildResultText(_result),
                 ),
-                const SizedBox(height: 4),
+
+                const SizedBox(height: 6),
+
                 Text(
                   _resultSub,
                   style: GoogleFonts.quicksand(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: _textMuted,
+                    color: textMuted,
                   ),
                 ),
               ],
@@ -356,53 +292,125 @@ class _VoiceCalculatorState extends State<VoiceCalculator>
     );
   }
 
-  Widget _sLabel(String t, Color c) => Text(
-    t,
-    style: TextStyle(
-      fontSize: 10,
-      fontWeight: FontWeight.w700,
-      letterSpacing: 1.6,
-      color: c,
-      fontFamily: 'Quicksand',
-    ),
-  );
 
-  // ─────────────────────────────────────────────
-  //  MIC BUTTON
-  // ─────────────────────────────────────────────
+
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
   Widget _buildMicButton() {
-    return AvatarGlow(
-      animate: _isListening,
-      glowColor: _isListening ? _pink : _lavender,
-      duration: const Duration(milliseconds: 1400),
-      child: GestureDetector(
-        onTap: _listen,
-        child: Container(
-          width: 72, height: 72,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: _isListening
-                  ? [_pink, const Color(0xFFFB7185)]
-                  : [_lavender, _pink],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: (_isListening ? _pink : _lavender).withOpacity(0.45),
-                blurRadius: 24,
-                spreadRadius: 2,
-                offset: const Offset(0, 8),
+    return GestureDetector(
+      onTap: _listen,
+      child: AnimatedBuilder(
+        animation: _pulseAnimation,
+        builder: (context, child) {
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              // 🌊 Ripple Effect (reduced + smoother)
+              if (_isListening)
+                Container(
+                  width: 140 * _pulseAnimation.value,
+                  height: 140 * _pulseAnimation.value,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFFA594F9).withOpacity(0.10),
+                  ),
+                ),
+
+              if (_isListening)
+                Container(
+                  width: 170 * _pulseAnimation.value,
+                  height: 170 * _pulseAnimation.value,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFFF5EFFF).withOpacity(0.25),
+                  ),
+                ),
+
+              // ✨ Outer Glow Ring (more subtle now)
+              Container(
+                width: 105,
+                height: 105,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFFF5EFFF).withOpacity(
+                          _isListening ? 0.30 : 0.18), // reacts to state
+                      Colors.transparent,
+                    ],
+                    radius: 0.85,
+                  ),
+                ),
+              ),
+
+              // 💎 Main Button
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+
+                // smoother size jump
+                width: _isListening ? 95 : 90,
+                height: _isListening ? 95 : 90,
+
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+
+                  // 🎨 Slightly richer gradient when listening
+                  gradient: LinearGradient(
+                    colors: _isListening
+                        ? [
+                      const Color(0xFF9F8AFB), // deeper purple
+                      const Color(0xFFEADFFF), // soft highlight
+                    ]
+                        : [
+                      const Color(0xFFA594F9),
+                      const Color(0xFFF5EFFF),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+
+                  // ✨ Add glow only when listening
+                  boxShadow: _isListening
+                      ? [
+                    BoxShadow(
+                      color: const Color(0xFFA594F9).withOpacity(0.45),
+                      blurRadius: 18,
+                      spreadRadius: 2,
+                    ),
+                  ]
+                      : [],
+                ),
+
+                child: Center(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    width: _isListening ? 70 : 75,
+                    height: _isListening ? 70 : 75,
+
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(
+                          _isListening ? 0.20 : 0.15), // slightly brighter
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.35),
+                        width: 1.2,
+                      ),
+                    ),
+
+                    child: Icon(
+                      _isListening
+                          ? Icons.stop_rounded
+                          : Icons.mic_rounded,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                  ),
+                ),
               ),
             ],
-          ),
-          child: Icon(
-            _isListening ? Icons.stop_rounded : Icons.mic_rounded,
-            color: Colors.white,
-            size: 30,
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -412,109 +420,14 @@ class _VoiceCalculatorState extends State<VoiceCalculator>
     style: GoogleFonts.quicksand(
       fontSize: 12,
       fontWeight: FontWeight.w600,
-      color: _isListening ? _pink : _textMuted,
+      color: _isListening ? pink : textMuted,
       letterSpacing: 0.2,
     ),
   );
-
-  // ─────────────────────────────────────────────
-  //  BOTTOM NAV
-  // ─────────────────────────────────────────────
 }
 
-// ─────────────────────────────────────────────
-//  SUB-WIDGETS
-// ─────────────────────────────────────────────
 
-class _Blob extends StatelessWidget {
-  final Color color;
-  final double size;
-  final double? top, bottom, left, right;
-  const _Blob({required this.color, required this.size, this.top, this.bottom, this.left, this.right});
 
-  @override
-  Widget build(BuildContext context) => Positioned(
-    top: top, bottom: bottom, left: left, right: right,
-    child: Container(
-      width: size, height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(colors: [color, Colors.transparent]),
-      ),
-    ),
-  );
-}
 
-class _PastelDivider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Container(
-    height: 1,
-    decoration: BoxDecoration(
-      gradient: LinearGradient(colors: [
-        Colors.transparent,
-        const Color(0xFFC4A0E6).withOpacity(0.35),
-        Colors.transparent,
-      ]),
-    ),
-  );
-}
 
-class _SoundBar extends StatefulWidget {
-  final bool active;
-  final double delay;
-  const _SoundBar({required this.active, required this.delay});
-  @override
-  State<_SoundBar> createState() => _SoundBarState();
-}
 
-class _SoundBarState extends State<_SoundBar> with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _anim;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(vsync: this, duration: Duration(milliseconds: 500 + (widget.delay * 400).toInt()));
-    _anim = Tween<double>(begin: 5, end: 18).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
-    _sync();
-  }
-
-  @override
-  void didUpdateWidget(_SoundBar old) {
-    super.didUpdateWidget(old);
-    _sync();
-  }
-
-  void _sync() {
-    if (widget.active) {
-      Future.delayed(Duration(milliseconds: (widget.delay * 300).toInt()), () {
-        if (mounted) _ctrl.repeat(reverse: true);
-      });
-    } else {
-      _ctrl.animateTo(0, duration: const Duration(milliseconds: 250));
-    }
-  }
-
-  @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
-
-  @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-    animation: _anim,
-    builder: (_, __) => Container(
-      width: 5,
-      height: _anim.value,
-      margin: const EdgeInsets.symmetric(horizontal: 2),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(3),
-        gradient: LinearGradient(
-          colors: widget.active
-              ? [const Color(0xFFC084FC), const Color(0xFFF9A8D4)]
-              : [const Color(0xFFC084FC).withOpacity(0.3), const Color(0xFFF9A8D4).withOpacity(0.3)],
-          begin: Alignment.bottomCenter,
-          end: Alignment.topCenter,
-        ),
-      ),
-    ),
-  );
-}

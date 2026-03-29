@@ -43,7 +43,7 @@ class _IntroScreenState extends State<IntroScreen>
     });
 
     // Auto navigate after intro
-    Future.delayed(const Duration(seconds: 15), () {
+    Future.delayed(const Duration(seconds: 14), () {
       if (mounted) {
         _goToHome();
       }
