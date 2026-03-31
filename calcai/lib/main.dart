@@ -127,6 +127,25 @@ class _VoiceCalculatorState extends State<VoiceCalculator>
     }
   }
 
+  bool _isMathQuery(String input) {
+    final mathKeywords = [
+      'plus', 'minus', 'times', 'into', 'divided',
+      'add', 'subtract', 'multiply', 'divide',
+      'square root', 'cube root', 'power','root',
+      '+', '-', '*', '/', '^',
+      '√', '∛',          // ← add these
+    ];
+
+    input = input.toLowerCase();
+
+    bool hasNumber = RegExp(r'\d').hasMatch(input);
+    bool hasMathWord = mathKeywords.any((word) => input.contains(word));
+
+    // ← also check for √ and ∛ symbols directly
+    bool hasMathSymbol = RegExp(r'[+\-*/^√∛]').hasMatch(input);
+
+    return hasMathWord || (hasNumber && hasMathSymbol);
+  }
 
   void _processCalculation(String input) async {
     final res = await _ai.getAnswer(input);
@@ -134,8 +153,13 @@ class _VoiceCalculatorState extends State<VoiceCalculator>
       _result = res;
       _resultSub = input;
     });
-    _logic.speak('The answer is $res');
+    if (_isMathQuery(input)) {
+      _logic.speak('The answer is $res');
+    } else {
+      _logic.speak(res);
+    }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -161,7 +185,8 @@ class _VoiceCalculatorState extends State<VoiceCalculator>
                         _buildMicButton(),
                         const SizedBox(height: 8),
                         _buildTapLabel(),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 30),
+                        bottomLabel()
                       ],
                     ),
                   ),
@@ -418,12 +443,14 @@ class _VoiceCalculatorState extends State<VoiceCalculator>
   Widget _buildTapLabel() => Text(
     _isListening ? 'Listening…' : 'Tap to speak',
     style: GoogleFonts.quicksand(
-      fontSize: 12,
+      fontSize: 16,
       fontWeight: FontWeight.w600,
       color: _isListening ? pink : textMuted,
       letterSpacing: 0.2,
     ),
   );
+
+
 }
 
 

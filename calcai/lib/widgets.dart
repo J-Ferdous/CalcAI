@@ -14,8 +14,8 @@ Widget buildTopBar() {
         Row(
           children: [
             Container(
-              width: 36, height: 36,
-              decoration: BoxDecoration(
+              width: 40, height: 40,
+              /*decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 gradient: const LinearGradient(
                   colors: [lavender, pink],
@@ -23,22 +23,22 @@ Widget buildTopBar() {
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: [
-                  BoxShadow(
-                    color: lavender.withOpacity(0.4),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
+
                 ],
+              ),*/
+              child: Image.asset(
+                'assets/logo.png',
+                width: 30,
+                fit: BoxFit.contain,
               ),
-              child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 18),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width:5),
             Text(
               'CalcAI',
               style: GoogleFonts.nunito(
-                fontSize: 20,
+                fontSize: 25,
                 fontWeight: FontWeight.w900,
-                color: deepPlum,
+                color: Color(0xFFe2a9f1),
                 letterSpacing: -0.3,
               ),
             ),
@@ -66,6 +66,15 @@ Widget sLabel(String t, Color c) => Text(
     letterSpacing: 1.6,
     color: c,
     fontFamily: 'Quicksand',
+  ),
+);
+
+Widget bottomLabel() => Text(
+  'CalcAI is AI and can make mistakes.',
+  style: GoogleFonts.quicksand(
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.2,
   ),
 );
 

@@ -1,30 +1,155 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:math_expressions/math_expressions.dart';
+import 'dart:math';
+import 'basic-query.dart';
+import 'math_engine.dart';
 
 class AIService {
-  final String apiKey = "AIzaSyAQ9fHtfFKaGi19CUEN-Q9Fp-xEIzLAhzA";
-  
-  // Try local calculation first
-   Future<String> getAnswer(String prompt) async {
+  final String apiKey = "";
+
+
+  Future<String> getAnswer(String prompt) async {
     print("Processing: $prompt");
-    
-    // Step 1: Convert ALL word numbers to digits (generic)
-    String convertedPrompt = _convertWordsToNumbers(prompt);
-    print("Converted: $convertedPrompt");
-    
-    // Step 2: Try local calculation
-    String localResult = _calculateLocally(convertedPrompt);
-    if (localResult != "Error") {
-      print("Local calculation success: $localResult");
-      return localResult;
+
+    // Step 0: basic queries
+    String? basicReply = handleBasicQueries(prompt);
+    if (basicReply != null) return basicReply;
+
+    // Step 1: check if math
+    print("🔢 IS MATH: ${_isMathQuery(prompt)}");
+    if (_isMathQuery(prompt)) {
+      // ✅ Try local calculation FIRST on original prompt
+      //    _calculateLocally does its own word→symbol conversion internally
+      String localResult = _calculateLocally(prompt);
+
+      if (localResult != "Error" && localResult != "Cannot divide by zero") {
+        return localResult;
+      }
+
+      // ✅ Only if local fails, convert numbers then try again
+      String convertedPrompt = _convertWordsToNumbers(prompt);
+      print("Converted: $convertedPrompt");
+
+      localResult = _calculateLocally(convertedPrompt);
+      if (localResult != "Error") return localResult;
+
+      // Check if there's actually something to send to AI
+      if (!convertedPrompt.contains(RegExp(r'[0-9+\-*/^]'))) {
+        return await _chatWithAI(prompt);
+      }
+
+      return await _solveMathWithAI(convertedPrompt);
     }
-    
-    // Step 3: If local fails, use AI
-    print("Local calculation failed, using AI...");
-    return await _calculateWithAI(convertedPrompt);
+
+    return await _chatWithAI(prompt);
   }
-  
+
+  Future<String> _solveMathWithAI(String prompt) async {
+    try {
+      final url = Uri.parse(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey",
+      );
+
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "contents": [
+            {
+              "parts": [
+                {
+                  "text": "Solve this math problem and return ONLY the final answer (no explanation): $prompt"
+                }
+              ]
+            }
+          ],
+          "generationConfig": {
+            "temperature": 0.0,
+            //"maxOutputTokens": 50,
+          }
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data["candidates"][0]["content"]["parts"][0]["text"];
+      }
+
+      return "Couldn't solve";
+    } catch (e) {
+      return "Error: $e";
+    }
+  }
+
+  Future<String> _chatWithAI(String prompt) async {
+    try {
+      final url = Uri.parse(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey",
+      );
+
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "contents": [
+            {
+              "parts": [
+                {
+                "text": "Reply in short, one or two word if possible. If it is a math question, return only the final answer. If it is not math, reply naturally in 1-2 words. Do not explain anything. If it's unclear, politely guide the user to ask a math-related question: $prompt"
+                }
+              ]
+            }
+          ],
+          "generationConfig": {
+            "temperature": 0.7,
+            //"maxOutputTokens": 100,
+          }
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data["candidates"][0]["content"]["parts"][0]["text"];
+      }
+      print("Status Code: ${response.statusCode}");
+      print("Response Body: ${response.body}");
+      final random = Random();
+      List<String> responses = [
+        "Sorry, I didn't understand. Please try again.",
+        "Didn't get that. Try again.",
+        "Could you repeat that?",
+        "I couldn't understand. Ask again.",
+        "Hmm, I missed that. Try once more."
+      ];
+
+      return responses[random.nextInt(responses.length)];
+
+    } catch (e) {
+      return "Error: $e";
+    }
+  }
+
+
+  bool _isMathQuery(String input) {
+    final mathKeywords = [
+      'plus', 'minus', 'times', 'into', 'divided',
+      'add', 'subtract', 'multiply', 'divide',
+      'square root', 'cube root', 'power', 'root',
+      '+', '-', '*', '/', '^',
+      '√', '∛',          // ← add these
+    ];
+
+    input = input.toLowerCase();
+
+    bool hasNumber = RegExp(r'\d').hasMatch(input);
+    bool hasMathWord = mathKeywords.any((word) => input.contains(word));
+
+    // ← also check for √ and ∛ symbols directly
+    bool hasMathSymbol = RegExp(r'[+\-*/^√∛]').hasMatch(input);
+
+    return hasMathWord || (hasNumber && hasMathSymbol);
+  }
+
   String _convertWordsToNumbers(String text) {
     String result = text.toLowerCase();
     
@@ -112,50 +237,10 @@ class AIService {
     return result;
   }
 
-  String _calculateLocally(String expression) {
-    try {
-      // Convert spoken words to math symbols
-      String mathExpr = expression
-          .toLowerCase()
-          .replaceAll('plus', '+')
-          .replaceAll('minus', '-')
-          .replaceAll('times', '*')
-          .replaceAll('multiplied by', '*')
-          .replaceAll('divided by', '/')
-          .replaceAll('x', '*')
-          .replaceAll('÷', '/')
-          .replaceAll(' ', '');
-      
-      // Remove any non-math characters
-      mathExpr = mathExpr.replaceAll(RegExp(r'[^0-9+\-*/.]'), '');
-      
-      if (mathExpr.isEmpty) return "Error";
-      
-      // Check for division by zero
-      if (mathExpr.contains('/0')) return "Cannot divide by zero";
-      
-      // Parse and evaluate
-      Parser p = Parser();
-      Expression exp = p.parse(mathExpr);
-      ContextModel cm = ContextModel();
-      double result = exp.evaluate(EvaluationType.REAL, cm);
-      
-      // Format result
-      if (result.isNaN || result.isInfinite) return "Error";
-      
-      if (result == result.roundToDouble()) {
-        return result.toInt().toString();
-      }
-      
-      return result.toStringAsFixed(10).replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
-      
-    } catch (e) {
-      print("Local calculation error: $e");
-      return "Error";
-    }
-  }
-  
-  Future<String> _calculateWithAI(String prompt) async {
+  String _calculateLocally(String expression) => calculateLocally(expression);
+
+
+/*  Future<String> _calculateWithAI(String prompt) async {
     try {
       final url = Uri.parse(
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey",
@@ -199,5 +284,5 @@ class AIService {
     } catch (e) {
       return "Error: $e";
     }
-  }
+  }*/
 }

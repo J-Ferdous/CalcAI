@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'main.dart';
 import 'calculator_logic.dart';
-
+import 'package:google_fonts/google_fonts.dart';
 
 class IntroScreen extends StatefulWidget {
   const IntroScreen({super.key});
@@ -50,7 +50,8 @@ class _IntroScreenState extends State<IntroScreen>
     });
   }
 
-  void _goToHome() {
+  void _goToHome() async{
+    await _logic.initSpeech();
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => const VoiceCalculator()),
@@ -91,10 +92,16 @@ class _IntroScreenState extends State<IntroScreen>
 
                 const SizedBox(height: 20),
 
-                const Text(
+                Text(
                   "CalcAI",
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: GoogleFonts.nunito(
+                    fontSize: 42,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFFe2a9f1),
+                    letterSpacing: -0.3,
+                  ),
+                  /*style: TextStyle(
                     fontSize: 42,
                     fontWeight: FontWeight.bold,
                     fontFamily: 'serif',
@@ -107,8 +114,9 @@ class _IntroScreenState extends State<IntroScreen>
                         offset: Offset(0, 0),
                       ),
                     ],
-                  ),
+                  ),*/
                 ),
+
               ],
             ),
           ),
