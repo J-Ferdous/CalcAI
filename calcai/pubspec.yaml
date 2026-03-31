@@ -41,6 +41,7 @@ dependencies:
   http: ^1.6.0
   google_fonts: ^8.0.2
   expressions: ^0.2.5+3
+  flutter_native_splash: ^2.4.7
 
 dev_dependencies:
   flutter_test:
@@ -96,3 +97,16 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+flutter_native_splash:
+  color: "#fff4fb"   # background color
+  image: assets/splash.png  # your logo
+  icon_background_color: "#fff4fb"
+
+  android: true
+  ios: true
+  web: true
+
+  android_12:
+    image: assets/splash.png
+    color: "#fff4fb"
+    icon_background_color: "#fff4fb"
