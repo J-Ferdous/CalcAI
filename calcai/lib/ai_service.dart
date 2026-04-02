@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:math';
 import 'basic-query.dart';
 import 'math_engine.dart';
+import 'dart:io';
 
 class AIService {
   final String apiKey = "";
@@ -58,7 +59,7 @@ class AIService {
             {
               "parts": [
                 {
-                  "text": "Solve this math problem and return ONLY the final answer (no explanation): $prompt"
+                  "text": "You are CalcAI, an AI voice calculator developed by Jannatul Ferdous. Your job is to solve math problems, including complex ones. Solve math problems and return ONLY the final answer (no explanation). If the question is unsolvable, undefined, or has no valid answer, reply: Cannot be determined. If it is not math, reply shortly and then tell the user to provide a math-related question. If the question is unclear or incomplete, ask the user to provide a clear math problem.: $prompt"
                 }
               ]
             }
@@ -77,7 +78,10 @@ class AIService {
 
       return "Couldn't solve";
     } catch (e) {
-      return "Error: $e";
+      if (e is SocketException) {
+        return "Check your internet connection and  try again";
+      }
+      return "Error";
     }
   }
 
@@ -95,7 +99,7 @@ class AIService {
             {
               "parts": [
                 {
-                "text": "Reply in short, one or two word if possible. If it is a math question, return only the final answer. If it is not math, reply naturally in 1-2 words. Do not explain anything. If it's unclear, politely guide the user to ask a math-related question: $prompt"
+                "text": "You are CalcAI, an AI voice calculator developed by Jannatul Ferdous. Your job is to solve math problems, including complex ones. If it is a math question, return only the final answer. Do not explain anything. If it is not math, reply shortly and then tell the user to provide a math-related question. If unclear, politely guide the user to ask a math question.: $prompt"
                 }
               ]
             }
@@ -125,7 +129,10 @@ class AIService {
       return responses[random.nextInt(responses.length)];
 
     } catch (e) {
-      return "Error: $e";
+      if (e is SocketException) {
+        return "Check your internet connection and  try again";
+      }
+      return "Error";
     }
   }
 

@@ -33,7 +33,7 @@ class _IntroScreenState extends State<IntroScreen>
     Future.delayed(const Duration(seconds: 1), () async {
       try {
         _logic.speak(
-          "Hi! I am Calcai, your AI voice calculator. "
+          "Hi! I am CalcAI, your AI voice calculator. "
           "Just speak something like fifteen plus five times two. "
           "And I will solve it instantly for you.",
         );
