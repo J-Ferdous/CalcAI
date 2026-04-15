@@ -14,110 +14,159 @@ class _IntroScreenState extends State<IntroScreen>
     with SingleTickerProviderStateMixin {
 
   final CalculatorLogic _logic = CalculatorLogic();
-  double _opacity = 0;
+
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
 
-    // Fade animation
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        setState(() {
-          _opacity = 1;
-        });
-      }
-    });
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    );
 
-    // Voice intro
-    Future.delayed(const Duration(seconds: 1), () async {
-      try {
-        _logic.speak(
-          "Hi! I am CalcAI, your AI voice calculator. "
-          "Just speak something like fifteen plus five times two. "
-          "And I will solve it instantly for you.",
-        );
-      } catch (e) {
-        print("TTS Error: $e");
-      }
-    });
+    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(_controller);
 
-    // Auto navigate after intro
-    Future.delayed(const Duration(seconds: 14), () {
-      if (mounted) {
-        _goToHome();
-      }
-    });
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+    );
+
+    _startIntro();
   }
 
-  void _goToHome() async{
+  Future<void> _startIntro() async {
+    _controller.forward();
+
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    try {
+      await _logic.speak(
+        "Hi! I am CalcAI, your AI voice calculator. "
+        "Just speak something like fifteen plus five times two. "
+        "And I will solve it instantly for you.",
+      );
+    } catch (e) {
+      debugPrint("TTS Error: $e");
+    }
+
+    await Future.delayed(const Duration(seconds: 3));
+
+    if (mounted) {
+      _goToHome();
+    }
+  }
+
+  Future<void> _goToHome() async {
     await _logic.initSpeech();
+
+    if (!mounted) return;
+
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const VoiceCalculator()),
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 600),
+        pageBuilder: (_, __, ___) => const VoiceCalculator(),
+        transitionsBuilder: (_, animation, __, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
     );
   }
 
-
-
   @override
   void dispose() {
-    // Stop any ongoing speech
+    _controller.dispose();
+
     try {
-      _logic.stop(); // make sure this exists in CalculatorLogic
+      _logic.stop();
     } catch (e) {
-      print("Stop error: $e");
+      debugPrint("Stop error: $e");
     }
+
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: AnimatedOpacity(
-        duration: const Duration(seconds: 2),
-        opacity: _opacity,
-        child: Container(
-          width: double.infinity,
-          color: const Color(0xFFfff4fb),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset(
-                  'assets/ai.gif',
-                  width: 280,
-                  fit: BoxFit.contain,
-                ),
+      body: Container(
+        width: double.infinity,
 
-                const SizedBox(height: 20),
+        // Gradient background (premium look)
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFfff4fb),
+              Color(0xFFf8e1ff),
+              Color(0xFFf3d1ff),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
 
-                Text(
-                  "CalcAI",
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.nunito(
-                    fontSize: 42,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFFe2a9f1),
-                    letterSpacing: -0.3,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+
+                  // Animated AI GIF
+                  Hero(
+                    tag: "ai_logo",
+                    child: Image.asset(
+                      'assets/ai.gif',
+                      width: 260,
+                    ),
                   ),
-                  /*style: TextStyle(
-                    fontSize: 42,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'serif',
-                    color: Color(0xFFe2a9f1),
-                    letterSpacing: 3,
-                    shadows: [
-                      Shadow(
-                        blurRadius: 20,
-                        color: Color(0xFFe2a9f1),
-                        offset: Offset(0, 0),
-                      ),
-                    ],
-                  ),*/
-                ),
 
-              ],
+                  const SizedBox(height: 30),
+
+                  // App Name
+                  Text(
+                    "CalcAI",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.nunito(
+                      fontSize: 46,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFFe2a9f1),
+                      letterSpacing: -0.5,
+                      shadows: [
+                        Shadow(
+                          blurRadius: 20,
+                          color: Color(0xFFe2a9f1).withOpacity(0.6),
+                          offset: const Offset(0, 0),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  //  Subtitle
+                  Text(
+                    "Your Smart Voice Calculator",
+                    style: GoogleFonts.nunito(
+                      fontSize: 16,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // Loading Indicator
+                  const CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: Color(0xFFe2a9f1),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
