@@ -6,8 +6,7 @@ import 'math_engine.dart';
 import 'dart:io';
 
 class AIService {
-  final String apiKey = "AIzaSyAM7vIIFdeOuamWq4swoIPMAK8AXcD2Wcc";
-
+  final String apiKey = "AIzaSyC4svzHQ5k2DJCl6WLZkiQ46LXPjEgu9QQ";
 
   Future<String> getAnswer(String prompt) async {
     print("Processing: $prompt");

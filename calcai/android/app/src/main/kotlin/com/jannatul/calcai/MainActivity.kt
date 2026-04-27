@@ -1,4 +1,4 @@
-package com.example.calcai
+package com.jannatul.calcai
 
 import io.flutter.embedding.android.FlutterActivity
 

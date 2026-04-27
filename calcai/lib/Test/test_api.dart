@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 void main() async {
-  String apiKey = "AIzaSyAQ9fHtfFKaGi19CUEN-Q9Fp-xEIzLAhzA";
+  String apiKey = "";
   
   final url = Uri.parse(
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey",
